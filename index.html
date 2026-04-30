@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ER Flow</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overscroll-behavior:none}
+body{
+  background:#07090f;color:#e2e8f0;
+  font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;
+  font-size:15px;line-height:1.4;-webkit-font-smoothing:antialiased;
+}
+:root{
+  --bg0:#07090f;--bg1:#0c0f1a;--bg2:#111520;--bg3:#161c2e;--bg4:#1c2338;
+  --border:#1e2640;--border2:#28304a;
+  --txt:#e2e8f0;--txt2:#8899b4;--txt3:#3a4560;
+  --green:#00d98a;--gbg:#001a10;--gbd:#004d2a;
+  --yellow:#f5b731;--ybg:#1a1200;--ybd:#4a3800;
+  --red:#ff3b3b;--rbg:#1a0505;--rbd:#550000;
+  --blue:#3d9eff;--bbg:#00101f;--bbd:#003366;
+  --orange:#ff7730;--obg:#1a0a00;--obd:#4d2200;
+  --purple:#b088ff;--pbg:#0f0a1f;--pbd:#30206a;
+  --teal:#00cfcf;--tbg:#001a1a;--tbd:#004444;
+  --accent:#00d98a;
+  --r:12px;--rs:8px;
+}
+
+/* ── APP SHELL ── */
+#app{display:flex;flex-direction:column;height:100dvh;max-width:430px;margin:0 auto;overflow:hidden;position:relative;}
+
+/* ── HEADER ── */
+#header{
+  background:var(--bg0);border-bottom:1px solid var(--border);
+  padding:14px 16px 12px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.logo{font-size:12px;font-weight:800;letter-spacing:.16em;color:var(--accent);text-transform:uppercase;}
+.logo-sub{font-size:10px;color:var(--txt3);font-weight:400;letter-spacing:.04em;margin-top:1px;}
+.header-right{display:flex;align-items:center;gap:8px;}
+.pt-badge{
+  font-size:11px;font-family:'SF Mono',monospace;
+  background:var(--bg3);border:1px solid var(--border2);
+  color:var(--txt2);padding:4px 10px;border-radius:20px;
+}
+#end-btn{
+  font-size:10px;font-weight:700;letter-spacing:.08em;
+  background:var(--rbg);color:var(--red);
+  border:1px solid var(--rbd);border-radius:20px;
+  padding:6px 12px;cursor:pointer;text-transform:uppercase;
+  transition:background .15s;
+}
+#end-btn:active{background:#2d0000;}
+
+/* ── FLOW BOOST ── */
+#flow-boost{
+  background:var(--bg1);border-bottom:1px solid var(--border);
+  padding:10px 16px 12px;flex-shrink:0;
+}
+.boost-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:8px;
+}
+.boost-title{
+  font-size:10px;font-weight:800;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--txt3);
+}
+.boost-subtitle{font-size:10px;color:var(--txt3);}
+#boost-cards{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;}
+#boost-cards::-webkit-scrollbar{display:none;}
+.boost-card{
+  flex-shrink:0;background:var(--bg2);border:1px solid var(--border2);
+  border-radius:var(--rs);padding:8px 10px;min-width:110px;max-width:130px;
+  cursor:pointer;transition:border-color .15s,transform .1s;
+}
+.boost-card:active{transform:scale(.97);}
+.boost-card.urgent{border-color:var(--rbd);background:var(--rbg);}
+.boost-card.ready{border-color:var(--gbd);background:var(--gbg);}
+.boost-card.stuck{border-color:var(--ybd);background:var(--ybg);}
+.boost-room{font-size:18px;font-weight:800;font-family:'SF Mono',monospace;color:var(--txt);}
+.boost-reason{font-size:10px;color:var(--txt2);margin-top:2px;}
+.boost-action{
+  font-size:10px;font-weight:700;margin-top:6px;
+  padding:3px 6px;border-radius:4px;display:inline-block;
+}
+.boost-empty{
+  font-size:12px;color:var(--txt3);padding:6px 0;
+  text-align:center;width:100%;
+}
+
+/* ── MAIN SCROLL ── */
+#main{flex:1;overflow-y:auto;padding:12px 12px 90px;display:flex;flex-direction:column;gap:10px;}
+#main::-webkit-scrollbar{display:none;}
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:60px 20px;gap:12px;
+}
+.empty-icon{font-size:48px;opacity:.3;}
+.empty-text{font-size:14px;color:var(--txt3);text-align:center;}
+
+/* ── PATIENT CARD ── */
+.pcard{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--r);padding:12px 14px;
+  transition:border-color .2s;position:relative;overflow:hidden;
+}
+.pcard::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+}
+.pcard.urgent::before{background:var(--red);}
+.pcard.fresh::before{background:var(--green);}
+.pcard.warn::before{background:var(--yellow);}
+.pcard.late::before{background:var(--orange);}
+.pcard.crit::before{background:var(--red);}
+
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;}
+.card-left{display:flex;align-items:center;gap:10px;}
+.room-num{
+  font-size:26px;font-weight:900;font-family:'SF Mono',monospace;
+  line-height:1;color:var(--txt);
+}
+.card-meta{display:flex;flex-direction:column;gap:2px;}
+.complaint-tag{
+  font-size:11px;font-weight:700;letter-spacing:.04em;
+  padding:3px 8px;border-radius:20px;display:inline-block;
+}
+.card-timer{font-size:11px;font-family:'SF Mono',monospace;}
+
+.card-right{display:flex;align-items:center;gap:8px;}
+.urgent-btn{
+  width:36px;height:36px;border-radius:50%;border:2px solid var(--border2);
+  background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:16px;transition:all .15s;flex-shrink:0;
+}
+.urgent-btn.on{border-color:var(--rbd);background:var(--rbg);}
+.urgent-btn:active{transform:scale(.9);}
+
+/* ── CHIPS ── */
+.chips-row{display:flex;gap:6px;margin-bottom:8px;}
+.chip{
+  flex:1;padding:6px 4px;border-radius:var(--rs);border:1px solid;
+  text-align:center;cursor:pointer;transition:all .15s;
+  font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  -webkit-user-select:none;user-select:none;
+}
+.chip:active{transform:scale(.96);}
+.chip-label{display:block;font-size:9px;font-weight:400;letter-spacing:.04em;margin-bottom:1px;opacity:.7;}
+
+/* chip states */
+.chip.not  {background:var(--bg3);border-color:var(--border2);color:var(--txt3);}
+.chip.pend {background:var(--ybg);border-color:var(--ybd);color:var(--yellow);}
+.chip.done {background:var(--gbg);border-color:var(--gbd);color:var(--green);}
+
+/* ── NEXT ACTION ── */
+.next-action{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 10px;border-radius:var(--rs);margin-top:4px;
+  cursor:pointer;transition:opacity .15s;
+}
+.next-action:active{opacity:.75;}
+.na-label{font-size:10px;color:var(--txt3);font-weight:500;}
+.na-value{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;}
+.na-arrow{font-size:12px;opacity:.5;}
+
+/* action colors */
+.na-labs   {background:var(--bbg);border:1px solid var(--bbd);}
+.na-labs .na-value{color:var(--blue);}
+.na-review {background:var(--ybg);border:1px solid var(--ybd);}
+.na-review .na-value{color:var(--yellow);}
+.na-dc     {background:var(--gbg);border:1px solid var(--gbd);}
+.na-dc .na-value{color:var(--green);}
+.na-reval  {background:var(--rbg);border:1px solid var(--rbd);}
+.na-reval .na-value{color:var(--red);}
+.na-consult{background:var(--pbg);border:1px solid var(--pbd);}
+.na-consult .na-value{color:var(--purple);}
+
+/* dismiss */
+.dismiss-btn{
+  position:absolute;top:10px;right:10px;
+  width:24px;height:24px;border-radius:50%;
+  background:var(--bg3);border:1px solid var(--border2);
+  color:var(--txt3);font-size:12px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.dismiss-btn:active{background:var(--rbg);color:var(--red);}
+
+/* ── FAB ── */
+#fab{
+  position:fixed;bottom:24px;right:50%;transform:translateX(calc(50% + 0px));
+  max-width:calc(430px - 32px);width:calc(100% - 32px);
+  background:var(--accent);color:#001f10;
+  font-size:15px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  padding:16px;border:none;border-radius:14px;cursor:pointer;
+  box-shadow:0 4px 24px rgba(0,217,138,.3);
+  transition:transform .1s,box-shadow .1s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  z-index:100;
+}
+#fab:active{transform:translateX(calc(50% + 0px)) scale(.97);box-shadow:0 2px 12px rgba(0,217,138,.2);}
+.fab-icon{font-size:20px;}
+
+/* ── MODAL ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);
+  display:none;align-items:flex-end;justify-content:center;
+  z-index:200;backdrop-filter:blur(4px);
+}
+.modal-overlay.open{display:flex;}
+.modal-sheet{
+  background:var(--bg1);border-radius:20px 20px 0 0;
+  border-top:1px solid var(--border2);
+  width:100%;max-width:430px;max-height:88dvh;
+  display:flex;flex-direction:column;
+  animation:slideUp .25s ease-out;
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-drag{
+  width:36px;height:4px;border-radius:2px;
+  background:var(--border2);margin:10px auto 0;flex-shrink:0;
+}
+.modal-title{
+  font-size:16px;font-weight:800;padding:14px 20px 12px;
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.modal-body{flex:1;overflow-y:auto;padding:16px 16px 24px;}
+.modal-body::-webkit-scrollbar{display:none;}
+
+/* ── SELECTORS ── */
+.sel-section{margin-bottom:20px;}
+.sel-label{
+  font-size:10px;font-weight:800;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--txt3);margin-bottom:10px;
+}
+.room-grid{
+  display:grid;grid-template-columns:repeat(6,1fr);gap:6px;
+}
+.complaint-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:8px;
+}
+.sel-btn{
+  background:var(--bg3);border:1px solid var(--border2);
+  color:var(--txt2);border-radius:var(--rs);padding:12px 8px;
+  font-size:13px;font-weight:600;cursor:pointer;
+  transition:all .15s;text-align:center;
+}
+.sel-btn:active{transform:scale(.96);}
+.sel-btn.active{
+  background:rgba(0,217,138,.12);border-color:var(--gbd);
+  color:var(--green);font-weight:700;
+}
+.sel-btn.used{
+  background:var(--bg1);border-color:var(--border);
+  color:var(--txt3);opacity:.4;cursor:not-allowed;
+}
+.complaint-btn{
+  background:var(--bg3);border:1px solid var(--border2);
+  color:var(--txt2);border-radius:var(--r);padding:14px 10px;
+  font-size:13px;font-weight:600;cursor:pointer;
+  transition:all .15s;text-align:center;display:flex;
+  flex-direction:column;align-items:center;gap:5px;
+}
+.complaint-btn:active{transform:scale(.96);}
+.complaint-btn .cb-icon{font-size:24px;}
+.complaint-btn .cb-name{font-size:11px;font-weight:700;letter-spacing:.03em;}
+.complaint-btn.active{
+  background:rgba(0,217,138,.1);border-color:var(--gbd);
+}
+#add-confirm{
+  width:100%;background:var(--accent);color:#001f10;
+  font-size:15px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  padding:16px;border:none;border-radius:14px;cursor:pointer;
+  margin-top:20px;opacity:.4;transition:opacity .2s,transform .1s;
+}
+#add-confirm:not(:disabled){opacity:1;}
+#add-confirm:not(:disabled):active{transform:scale(.98);}
+
+/* ── CONFIRM DIALOG ── */
+#confirm-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.8);
+  display:none;align-items:center;justify-content:center;
+  z-index:300;padding:20px;backdrop-filter:blur(6px);
+}
+#confirm-overlay.open{display:flex;}
+.confirm-box{
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:16px;padding:24px 20px;width:100%;max-width:320px;
+  text-align:center;
+}
+.confirm-icon{font-size:36px;margin-bottom:12px;}
+.confirm-title{font-size:17px;font-weight:800;margin-bottom:8px;}
+.confirm-body{font-size:13px;color:var(--txt2);margin-bottom:20px;}
+.confirm-btns{display:flex;gap:10px;}
+.confirm-cancel{
+  flex:1;background:var(--bg3);border:1px solid var(--border2);
+  color:var(--txt2);font-size:14px;font-weight:700;
+  padding:13px;border-radius:var(--rs);cursor:pointer;
+}
+.confirm-ok{
+  flex:1;background:var(--rbg);border:1px solid var(--rbd);
+  color:var(--red);font-size:14px;font-weight:700;
+  padding:13px;border-radius:var(--rs);cursor:pointer;
+}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-80px);
+  background:var(--bg3);border:1px solid var(--border2);
+  color:var(--txt);font-size:13px;font-weight:600;
+  padding:10px 20px;border-radius:20px;
+  z-index:400;transition:transform .25s ease;
+  white-space:nowrap;pointer-events:none;
+}
+#toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ── VOICE ── */
+#voice-btn{
+  position:fixed;bottom:24px;right:16px;
+  width:52px;height:52px;border-radius:50%;
+  background:var(--bg3);border:1.5px solid var(--border2);
+  color:var(--txt2);font-size:20px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 12px rgba(0,0,0,.4);
+  transition:all .15s;z-index:99;
+}
+#voice-btn.listening{
+  background:var(--rbg);border-color:var(--rbd);color:var(--red);
+  animation:pulse 1s infinite;
+}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,59,59,.4)}50%{box-shadow:0 0 0 8px rgba(255,59,59,0)}}
+
+/* ── COMPLAINT COLORS ── */
+.cc-chest   {background:rgba(255,59,59,.15);border-color:#550000;color:#ff7070;}
+.cc-sob     {background:rgba(61,158,255,.12);border-color:#003060;color:#6fb8ff;}
+.cc-abdo    {background:rgba(245,183,49,.12);border-color:#4a3000;color:#f5b731;}
+.cc-trauma  {background:rgba(255,119,48,.14);border-color:#4d2200;color:#ff9050;}
+.cc-psych   {background:rgba(176,136,255,.14);border-color:#30206a;color:#c4a0ff;}
+.cc-fever   {background:rgba(0,207,207,.12);border-color:#004444;color:#00cfcf;}
+.cc-other   {background:rgba(148,163,180,.1);border-color:#2a3548;color:#94a3b8;}
+
+/* boost card complaint colors */
+.bcc-chest  {color:#ff7070;} .bcc-sob{color:#6fb8ff;} .bcc-abdo{color:#f5b731;}
+.bcc-trauma {color:#ff9050;} .bcc-psych{color:#c4a0ff;} .bcc-fever{color:#00cfcf;}
+.bcc-other  {color:#94a3b8;}
+
+/* timer colors */
+.tc-fresh  {color:#00d98a;}
+.tc-warn   {color:#f5b731;}
+.tc-late   {color:#ff7730;}
+.tc-crit   {color:#ff3b3b;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <div>
+      <div class="logo">ER Flow</div>
+      <div class="logo-sub">Shift Dashboard</div>
+    </div>
+    <div class="header-right">
+      <div class="pt-badge" id="pt-count">0 pts</div>
+      <button id="end-btn" onclick="confirmEndShift()">End Shift</button>
+    </div>
+  </div>
+
+  <!-- FLOW BOOST -->
+  <div id="flow-boost">
+    <div class="boost-hdr">
+      <div class="boost-title">⚡ Flow Boost</div>
+      <div class="boost-subtitle" id="boost-sub">Top priority patients</div>
+    </div>
+    <div id="boost-cards"></div>
+  </div>
+
+  <!-- MAIN BOARD -->
+  <div id="main">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">🏥</div>
+      <div class="empty-text">No patients on board.<br>Tap <strong>+ Add Patient</strong> to start.</div>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <button id="fab" onclick="openAddModal()">
+    <span class="fab-icon">＋</span> Add Patient
+  </button>
+
+  <!-- VOICE BTN -->
+  <button id="voice-btn" onclick="toggleVoice()" title="Voice command">🎤</button>
+</div>
+
+<!-- ADD PATIENT MODAL -->
+<div class="modal-overlay" id="add-modal" onclick="handleModalBgClick(event)">
+  <div class="modal-sheet">
+    <div class="modal-drag"></div>
+    <div class="modal-title">Add Patient</div>
+    <div class="modal-body">
+      <div class="sel-section">
+        <div class="sel-label">Room Number</div>
+        <div class="room-grid" id="room-grid"></div>
+      </div>
+      <div class="sel-section">
+        <div class="sel-label">Chief Complaint</div>
+        <div class="complaint-grid" id="complaint-grid"></div>
+      </div>
+      <button id="add-confirm" disabled onclick="confirmAdd()">Add to Board →</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DIALOG -->
+<div id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-icon">🚪</div>
+    <div class="confirm-title">End Shift?</div>
+    <div class="confirm-body">This will clear all patients from the board. This action cannot be undone.</div>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="confirm-ok" onclick="doEndShift()">Clear Board</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ── CONSTANTS ──────────────────────────────────────────────────────────────
+const COMPLAINTS = [
+  {id:'chest',  name:'Chest Pain',     icon:'💔'},
+  {id:'sob',    name:'SOB',            icon:'🫁'},
+  {id:'abdo',   name:'Abdo Pain',      icon:'🩺'},
+  {id:'trauma', name:'Trauma',         icon:'🚑'},
+  {id:'psych',  name:'Psych',          icon:'🧠'},
+  {id:'fever',  name:'Fever',          icon:'🌡️'},
+  {id:'other',  name:'Other',          icon:'📋'},
+];
+const CHIP_STATES = ['not','pend','done'];
+const CHIP_LABELS = {not:'—',pend:'Pending',done:'Done'};
+const STORAGE_KEY = 'erflow_v3';
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let patients = [];
+let addRoom = null;
+let addComplaint = null;
+let timerInterval = null;
+let voiceActive = false;
+let recognition = null;
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+function init(){
+  load();
+  render();
+  timerInterval = setInterval(render, 30000);
+}
+
+// ── STORAGE ────────────────────────────────────────────────────────────────
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(patients));
+}
+function load(){
+  try { patients = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch(e){ patients = []; }
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function elapsed(ts){
+  const m = Math.floor((Date.now()-ts)/60000);
+  if(m < 60) return `${m}m`;
+  const h = Math.floor(m/60), rm = m%60;
+  return `${h}h ${rm < 10 ? '0'+rm : rm}m`;
+}
+function elapsedMins(ts){ return Math.floor((Date.now()-ts)/60000); }
+
+function timerClass(ts,urgent){
+  if(urgent) return 'tc-crit';
+  const m = elapsedMins(ts);
+  if(m < 60) return 'tc-fresh';
+  if(m < 120) return 'tc-warn';
+  if(m < 180) return 'tc-late';
+  return 'tc-crit';
+}
+function cardClass(ts,urgent){
+  if(urgent) return 'urgent';
+  const m = elapsedMins(ts);
+  if(m < 60) return 'fresh';
+  if(m < 120) return 'warn';
+  if(m < 180) return 'late';
+  return 'crit';
+}
+function complaintClass(id){ return 'cc-'+id; }
+function bComplaintClass(id){ return 'bcc-'+id; }
+
+function nextAction(p){
+  const {labs,imaging,dispo} = p.chips;
+  if(dispo==='done') return {label:'Discharge',cls:'na-dc'};
+  if(labs==='done' && imaging==='done' && dispo!=='done') return {label:'Dispo Now',cls:'na-dc'};
+  if(labs==='done' || imaging==='done') return {label:'Review Results',cls:'na-review'};
+  if(labs==='pend' || imaging==='pend') return {label:'Review Results',cls:'na-review'};
+  if(dispo==='pend') return {label:'Consult',cls:'na-consult'};
+  if(p.urgent) return {label:'Re-evaluate',cls:'na-reval'};
+  return {label:'Order Labs',cls:'na-labs'};
+}
+
+function score(p){
+  let s=0;
+  const m = elapsedMins(p.addedAt);
+  if(p.urgent) s+=1000;
+  if(p.chips.dispo==='done') s+=600;
+  if(p.chips.labs==='done'&&p.chips.imaging==='done'&&p.chips.dispo!=='done') s+=500;
+  if(p.chips.labs==='done'||p.chips.imaging==='done') s+=250;
+  s += Math.min(m*2, 400);
+  return s;
+}
+
+function boostReason(p){
+  if(p.urgent) return {label:'🔴 Urgent',cls:'urgent'};
+  if(p.chips.dispo==='done') return {label:'✅ Ready to DC',cls:'ready'};
+  if(p.chips.labs==='done'&&p.chips.imaging==='done') return {label:'📋 Results In',cls:'ready'};
+  const m = elapsedMins(p.addedAt);
+  if(m>=180) return {label:'⏰ Waiting '+elapsed(p.addedAt),cls:'stuck'};
+  if(m>=120) return {label:'⌛ '+elapsed(p.addedAt)+' waiting',cls:'stuck'};
+  return {label:'⬆️ High Priority',cls:''};
+}
+
+function complaintName(id){
+  const c = COMPLAINTS.find(x=>x.id===id);
+  return c ? c.name : id;
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function render(){
+  renderBoost();
+  renderCards();
+  document.getElementById('pt-count').textContent = patients.length + (patients.length===1?' pt':' pts');
+}
+
+function renderBoost(){
+  const container = document.getElementById('boost-cards');
+  if(!patients.length){
+    container.innerHTML = '<div class="boost-empty">No patients yet</div>';
+    document.getElementById('boost-sub').textContent = 'Top priority patients';
+    return;
+  }
+  const sorted = [...patients].sort((a,b)=>score(b)-score(a)).slice(0,3);
+  document.getElementById('boost-sub').textContent = `${sorted.length} patient${sorted.length>1?'s':''} need attention`;
+  const na = nextAction;
+  container.innerHTML = sorted.map(p=>{
+    const r = boostReason(p);
+    const action = na(p);
+    return `<div class="boost-card ${r.cls}" onclick="scrollToCard('${p.id}')">
+      <div class="boost-room">${p.room}</div>
+      <div class="boost-reason ${bComplaintClass(p.complaint)}">${complaintName(p.complaint)}</div>
+      <div class="boost-reason" style="margin-top:2px;font-size:9px;">${r.label}</div>
+      <div class="boost-action" style="background:none;color:inherit;font-size:9px;margin-top:4px;padding:0;opacity:.8;">→ ${action.label}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderCards(){
+  const main = document.getElementById('main');
+  const empty = document.getElementById('empty-state');
+  if(!patients.length){
+    empty.style.display='flex';
+    // remove all cards
+    [...main.querySelectorAll('.pcard')].forEach(c=>c.remove());
+    return;
+  }
+  empty.style.display='none';
+
+  // Sort: urgent first, then by score desc
+  const sorted = [...patients].sort((a,b)=>{
+    if(a.urgent&&!b.urgent) return -1;
+    if(!a.urgent&&b.urgent) return 1;
+    return score(b)-score(a);
+  });
+
+  // Rebuild
+  [...main.querySelectorAll('.pcard')].forEach(c=>c.remove());
+  sorted.forEach(p=>{
+    const el = buildCard(p);
+    main.appendChild(el);
+  });
+}
+
+function buildCard(p){
+  const div = document.createElement('div');
+  div.className = 'pcard '+cardClass(p.addedAt,p.urgent);
+  div.id = 'card-'+p.id;
+
+  const action = nextAction(p);
+  const tc = timerClass(p.addedAt,p.urgent);
+
+  div.innerHTML = `
+    <div class="card-top">
+      <div class="card-left">
+        <div class="room-num">Rm ${p.room}</div>
+        <div class="card-meta">
+          <div class="complaint-tag ${complaintClass(p.complaint)}">${complaintName(p.complaint)}</div>
+          <div class="card-timer ${tc}">⏱ ${elapsed(p.addedAt)}</div>
+        </div>
+      </div>
+      <div class="card-right">
+        <button class="urgent-btn ${p.urgent?'on':''}" onclick="toggleUrgent('${p.id}')" title="Toggle urgent">
+          ${p.urgent?'🔴':'⚪'}
+        </button>
+      </div>
+    </div>
+    <div class="chips-row">
+      ${buildChip(p,'labs','🧪','Labs')}
+      ${buildChip(p,'imaging','🩻','Imaging')}
+      ${buildChip(p,'dispo','📤','Dispo')}
+    </div>
+    <div class="next-action ${action.cls}" onclick="doNextAction('${p.id}')">
+      <div>
+        <div class="na-label">Next Best Action</div>
+        <div class="na-value">${action.label}</div>
+      </div>
+      <div class="na-arrow">›</div>
+    </div>
+    <button class="dismiss-btn" onclick="removePatient('${p.id}')" title="Discharge patient">✕</button>
+  `;
+  return div;
+}
+
+function buildChip(p,key,icon,label){
+  const state = p.chips[key];
+  return `<div class="chip ${state}" onclick="cycleChip('${p.id}','${key}')">
+    <span class="chip-label">${icon} ${label}</span>
+    ${CHIP_LABELS[state]}
+  </div>`;
+}
+
+function scrollToCard(id){
+  const el = document.getElementById('card-'+id);
+  if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+// ── ACTIONS ────────────────────────────────────────────────────────────────
+function cycleChip(id,key){
+  const p = patients.find(x=>x.id===id);
+  if(!p) return;
+  const idx = CHIP_STATES.indexOf(p.chips[key]);
+  p.chips[key] = CHIP_STATES[(idx+1)%CHIP_STATES.length];
+  save(); render();
+  const labels = {not:'Not Started',pend:'Pending',done:'Done'};
+  showToast(`Rm ${p.room} ${key}: ${labels[p.chips[key]]}`);
+}
+
+function toggleUrgent(id){
+  const p = patients.find(x=>x.id===id);
+  if(!p) return;
+  p.urgent = !p.urgent;
+  save(); render();
+  showToast(p.urgent ? `⚠️ Rm ${p.room} marked URGENT` : `Rm ${p.room} urgent cleared`);
+}
+
+function doNextAction(id){
+  const p = patients.find(x=>x.id===id);
+  if(!p) return;
+  const a = nextAction(p);
+  // Auto-advance chips based on action
+  if(a.label==='Order Labs'){ p.chips.labs='pend'; }
+  else if(a.label==='Review Results'){
+    if(p.chips.labs==='pend') p.chips.labs='done';
+    if(p.chips.imaging==='pend') p.chips.imaging='done';
+  }
+  else if(a.label==='Dispo Now'||a.label==='Discharge'){ p.chips.dispo='done'; }
+  else if(a.label==='Consult'){ p.chips.dispo='pend'; }
+  save(); render();
+  showToast(`Rm ${p.room}: ${a.label}`);
+}
+
+function removePatient(id){
+  const p = patients.find(x=>x.id===id);
+  if(!p) return;
+  patients = patients.filter(x=>x.id!==id);
+  save(); render();
+  showToast(`Rm ${p.room} discharged ✓`);
+}
+
+// ── ADD MODAL ──────────────────────────────────────────────────────────────
+function openAddModal(){
+  addRoom=null; addComplaint=null;
+  buildRoomGrid(); buildComplaintGrid();
+  document.getElementById('add-confirm').disabled=true;
+  document.getElementById('add-modal').classList.add('open');
+}
+function closeAddModal(){
+  document.getElementById('add-modal').classList.remove('open');
+}
+function handleModalBgClick(e){
+  if(e.target===document.getElementById('add-modal')) closeAddModal();
+}
+
+function buildRoomGrid(){
+  const grid = document.getElementById('room-grid');
+  grid.innerHTML='';
+  const used = new Set(patients.map(p=>p.room));
+  for(let r=1;r<=30;r++){
+    const btn=document.createElement('button');
+    const isUsed = used.has(r);
+    btn.className='sel-btn'+(isUsed?' used':'');
+    btn.textContent=r;
+    btn.disabled=isUsed;
+    if(!isUsed) btn.onclick=()=>selectRoom(r,btn);
+    grid.appendChild(btn);
+  }
+}
+
+function buildComplaintGrid(){
+  const grid = document.getElementById('complaint-grid');
+  grid.innerHTML='';
+  COMPLAINTS.forEach(c=>{
+    const btn=document.createElement('button');
+    btn.className='complaint-btn';
+    btn.innerHTML=`<span class="cb-icon">${c.icon}</span><span class="cb-name">${c.name}</span>`;
+    btn.onclick=()=>selectComplaint(c.id,btn);
+    grid.appendChild(btn);
+  });
+}
+
+function selectRoom(r,btn){
+  addRoom=r;
+  document.querySelectorAll('#room-grid .sel-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  checkAddReady();
+}
+function selectComplaint(id,btn){
+  addComplaint=id;
+  document.querySelectorAll('#complaint-grid .complaint-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  checkAddReady();
+}
+function checkAddReady(){
+  document.getElementById('add-confirm').disabled = !(addRoom && addComplaint);
+}
+
+function confirmAdd(){
+  if(!addRoom||!addComplaint) return;
+  const p = {
+    id: Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    room: addRoom,
+    complaint: addComplaint,
+    addedAt: Date.now(),
+    urgent: false,
+    chips: {labs:'not',imaging:'not',dispo:'not'},
+  };
+  patients.push(p);
+  save(); render();
+  closeAddModal();
+  showToast(`Room ${p.room} added`);
+  setTimeout(()=>scrollToCard(p.id),100);
+}
+
+// ── END SHIFT ──────────────────────────────────────────────────────────────
+function confirmEndShift(){
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+function closeConfirm(){
+  document.getElementById('confirm-overlay').classList.remove('open');
+}
+function doEndShift(){
+  patients=[];
+  save(); render();
+  closeConfirm();
+  showToast('Board cleared. Good work! 👋');
+}
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+let toastTimer=null;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ── VOICE ──────────────────────────────────────────────────────────────────
+function toggleVoice(){
+  if(!('webkitSpeechRecognition' in window||'SpeechRecognition' in window)){
+    showToast('Voice not supported on this browser');
+    return;
+  }
+  if(voiceActive){ stopVoice(); return; }
+  startVoice();
+}
+
+function startVoice(){
+  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang='en-US';
+  recognition.interimResults=false;
+  recognition.maxAlternatives=1;
+  recognition.onresult=e=>{
+    const transcript = e.results[0][0].transcript.toLowerCase();
+    processVoice(transcript);
+  };
+  recognition.onerror=()=>{ stopVoice(); showToast('Voice error. Try again.'); };
+  recognition.onend=()=>{ stopVoice(); };
+  recognition.start();
+  voiceActive=true;
+  document.getElementById('voice-btn').classList.add('listening');
+  showToast('🎤 Listening...');
+}
+
+function stopVoice(){
+  if(recognition) try{ recognition.stop(); }catch(e){}
+  voiceActive=false;
+  document.getElementById('voice-btn').classList.remove('listening');
+}
+
+function processVoice(text){
+  // "add room 5 chest pain"
+  const addMatch = text.match(/(?:add|room)\s+(\d+)\s*(.*)?/);
+  if(addMatch){
+    const room=parseInt(addMatch[1]);
+    const rest=(addMatch[2]||'').trim();
+    if(room>=1&&room<=30&&!patients.find(p=>p.room===room)){
+      let complaint='other';
+      if(rest.includes('chest')) complaint='chest';
+      else if(rest.includes('breath')||rest.includes('sob')) complaint='sob';
+      else if(rest.includes('abdo')||rest.includes('belly')||rest.includes('stomach')) complaint='abdo';
+      else if(rest.includes('trauma')) complaint='trauma';
+      else if(rest.includes('psych')||rest.includes('mental')) complaint='psych';
+      else if(rest.includes('fever')) complaint='fever';
+      const p={
+        id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+        room,complaint,addedAt:Date.now(),urgent:false,
+        chips:{labs:'not',imaging:'not',dispo:'not'},
+      };
+      patients.push(p); save(); render();
+      showToast(`Voice: Room ${room} added`);
+      return;
+    }
+  }
+  // "discharge room 5" / "clear room 5"
+  const dcMatch = text.match(/(?:discharge|clear|remove)\s+(?:room\s+)?(\d+)/);
+  if(dcMatch){
+    const room=parseInt(dcMatch[1]);
+    const p=patients.find(x=>x.room===room);
+    if(p){ removePatient(p.id); return; }
+  }
+  // "urgent room 5"
+  const urgMatch = text.match(/urgent\s+(?:room\s+)?(\d+)/);
+  if(urgMatch){
+    const p=patients.find(x=>x.room===parseInt(urgMatch[1]));
+    if(p){ toggleUrgent(p.id); return; }
+  }
+  showToast(`Didn't understand: "${text}"`);
+}
+
+// ── START ──────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
